@@ -424,14 +424,19 @@
                 );
 
                 if (!existing || event.created_at > existing.created_at) {
+                    // Remove existing booking for this slot
                     bookings = bookings.filter(b =>
                         !(b.day === content.day && b.time === content.time)
                     );
-                    bookings.push({
-                        ...content,
-                        id: event.id,
-                        created_at: event.created_at
-                    });
+
+                    // Only add back if not a deletion event
+                    if (!content.deleted) {
+                        bookings.push({
+                            ...content,
+                            id: event.id,
+                            created_at: event.created_at
+                        });
+                    }
                 }
             } catch (e) {
                 console.error('Invalid booking event:', e);
