@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sailing Club Event Schedule</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #2c5aa0;
+        }
+
+        h1 {
+            color: #2c5aa0;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .boat-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .admin-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #2c5aa0;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 1000;
+        }
+
+        .admin-btn:hover {
+            background: #1e3f73;
+        }
+
+        .admin-btn.active {
+            background: #e74c3c;
+        }
+
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .day-header {
+            background: #2c5aa0;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            border-radius: 6px;
+        }
+
+        .time-label {
+            background: #f0f0f0;
+            padding: 15px 10px;
+            text-align: center;
+            font-size: 0.9em;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slot {
+            background: #f9f9f9;
+            border: 2px dashed #ccc;
+            border-radius: 6px;
+            padding: 10px;
+            min-height: 80px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .slot:hover {
+            background: #e8f4f8;
+            border-color: #2c5aa0;
+        }
+
+        .slot.booked {
+            background: #d5e8f7;
+            border: 2px solid #2c5aa0;
+            cursor: default;
+        }
+
+        .slot.booked:hover {
+            background: #d5e8f7;
+        }
+
+        .slot-content {
+            font-size: 0.9em;
+        }
+
+        .slot-name {
+            font-weight: bold;
+            color: #2c5aa0;
+            margin-bottom: 5px;
+        }
+
+        .slot-title {
+            color: #333;
+            font-size: 0.85em;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 3px 8px;
+            font-size: 0.7em;
+            cursor: pointer;
+            display: none;
+        }
+
+        .admin-mode .slot.booked .delete-btn {
+            display: block;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal h2 {
+            color: #2c5aa0;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .note {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background: #2c5aa0;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1e3f73;
+        }
+
+        .btn-secondary {
+            background: #ccc;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #bbb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #2c5aa0;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            display: none;
+            z-index: 1000;
+        }
+
+        .status.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <button class="admin-btn" onclick="toggleAdmin()">Admin Mode</button>
+
+    <div class="container">
+        <header>
+            <div class="boat-icon">⛵</div>
+            <h1>Sailing Club Event Schedule</h1>
+            <p class="subtitle">Friday - Monday | 6:00 - 23:00</p>
+        </header>
+
+        <div class="loading" id="loading">Loading schedule...</div>
+
+        <div class="schedule-grid" id="schedule" style="display: none;"></div>
+    </div>
+
+    <div class="modal" id="bookingModal">
+        <div class="modal-content">
+            <h2>Book Time Slot</h2>
+            <div class="note">
+                ⚠️ If your talk needs more than an hour, please book consecutive slots.
+            </div>
+            <form id="bookingForm" onsubmit="submitBooking(event)">
+                <div class="form-group">
+                    <label>Your Name *</label>
+                    <input type="text" id="speakerName" required>
+                </div>
+                <div class="form-group">
+                    <label>Talk Title *</label>
+                    <input type="text" id="talkTitle" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="talkDescription"></textarea>
+                </div>
+                <input type="hidden" id="slotDay">
+                <input type="hidden" id="slotTime">
+                <div class="button-group">
+                    <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Book Slot</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <script>
+        // Configuration
+        const RELAYS = [
+            'wss://relay.damus.io',
+            'wss://nos.lol',
+            'wss://relay.nostr.band'
+        ];
+
+        const DAYS = ['Friday', 'Saturday', 'Sunday', 'Monday'];
+        const START_HOUR = 6;
+        const END_HOUR = 23;
+        const BOOKING_KIND = 30100;
+
+        let appRelayConnections = [];
+        let bookings = [];
+        let adminMode = false;
+        let adminKey = null;
+
+        // Initialize
+        window.addEventListener('load', () => {
+            console.log('App initializing...');
+            generateSchedule();
+            connectToRelays();
+        });
+
+        // Nostr WebSocket connections
+        function connectToRelays() {
+            console.log('Connecting to Nostr relays...');
+            RELAYS.forEach(relayUrl => {
+                try {
+                    const ws = new WebSocket(relayUrl);
+
+                    ws.onopen = () => {
+                        console.log('Connected to', relayUrl);
+                        subscribeToBookings(ws);
+                    };
+
+                    ws.onmessage = (event) => {
+                        try {
+                            handleRelayMessage(JSON.parse(event.data));
+                        } catch (e) {
+                            console.error('Error parsing relay message:', e);
+                        }
+                    };
+
+                    ws.onerror = (error) => {
+                        console.error('Relay error:', relayUrl, error);
+                    };
+
+                    ws.onclose = () => {
+                        console.log('Disconnected from', relayUrl);
+                    };
+
+                    appRelayConnections.push(ws);
+                } catch (e) {
+                    console.error('Failed to connect to relay:', relayUrl, e);
+                }
+            });
+
+            // Render empty schedule after a short delay if no events received
+            setTimeout(() => {
+                if (bookings.length === 0) {
+                    console.log('No bookings received, showing empty schedule');
+                    renderSchedule();
+                }
+            }, 3000);
+        }
+
+        function subscribeToBookings(ws) {
+            const subId = 'bookings-' + Math.random().toString(36).substr(2, 9);
+            const filter = {
+                kinds: [BOOKING_KIND],
+                limit: 500
+            };
+
+            ws.send(JSON.stringify(['REQ', subId, filter]));
+        }
+
+        function handleRelayMessage(message) {
+            const [type, subId, event] = message;
+
+            if (type === 'EVENT' && event.kind === BOOKING_KIND) {
+                addBooking(event);
+            } else if (type === 'EOSE') {
+                renderSchedule();
+            }
+        }
+
+        function addBooking(event) {
+            try {
+                const content = JSON.parse(event.content);
+                const existing = bookings.find(b =>
+                    b.day === content.day && b.time === content.time
+                );
+
+                if (!existing || event.created_at > existing.created_at) {
+                    bookings = bookings.filter(b =>
+                        !(b.day === content.day && b.time === content.time)
+                    );
+                    bookings.push({
+                        ...content,
+                        id: event.id,
+                        created_at: event.created_at
+                    });
+                }
+            } catch (e) {
+                console.error('Invalid booking event:', e);
+            }
+        }
+
+        function generateSchedule() {
+            console.log('Generating schedule grid...');
+            const schedule = document.getElementById('schedule');
+            schedule.innerHTML = '';
+
+            // Header row
+            schedule.appendChild(createDiv('', 'time-label'));
+            DAYS.forEach(day => {
+                schedule.appendChild(createDiv(day, 'day-header'));
+            });
+
+            // Time slots
+            for (let hour = START_HOUR; hour <= END_HOUR; hour++) {
+                const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+                schedule.appendChild(createDiv(timeStr, 'time-label'));
+
+                DAYS.forEach(day => {
+                    const slot = createSlot(day, timeStr);
+                    schedule.appendChild(slot);
+                });
+            }
+
+            console.log('Schedule grid generated, showing...');
+            document.getElementById('loading').style.display = 'none';
+            schedule.style.display = 'grid';
+        }
+
+        function createDiv(text, className) {
+            const div = document.createElement('div');
+            div.className = className;
+            div.textContent = text;
+            return div;
+        }
+
+        function createSlot(day, time) {
+            const slot = document.createElement('div');
+            slot.className = 'slot';
+            slot.dataset.day = day;
+            slot.dataset.time = time;
+            slot.onclick = () => openBookingModal(day, time);
+            return slot;
+        }
+
+        function renderSchedule() {
+            document.querySelectorAll('.slot').forEach(slot => {
+                const day = slot.dataset.day;
+                const time = slot.dataset.time;
+                const booking = bookings.find(b => b.day === day && b.time === time);
+
+                if (booking) {
+                    slot.classList.add('booked');
+                    slot.innerHTML = `
+                        <div class="slot-content">
+                            <div class="slot-name">${escapeHtml(booking.name)}</div>
+                            <div class="slot-title">${escapeHtml(booking.title)}</div>
+                        </div>
+                        <button class="delete-btn" onclick="deleteBooking('${day}', '${time}', event)">×</button>
+                    `;
+                    slot.onclick = null;
+                } else {
+                    slot.classList.remove('booked');
+                    slot.innerHTML = '';
+                    slot.onclick = () => openBookingModal(day, time);
+                }
+            });
+        }
+
+        function openBookingModal(day, time) {
+            const booking = bookings.find(b => b.day === day && b.time === time);
+            if (booking) return;
+
+            document.getElementById('slotDay').value = day;
+            document.getElementById('slotTime').value = time;
+            document.getElementById('bookingModal').classList.add('active');
+            document.getElementById('speakerName').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('bookingModal').classList.remove('active');
+            document.getElementById('bookingForm').reset();
+        }
+
+        async function submitBooking(event) {
+            event.preventDefault();
+
+            const day = document.getElementById('slotDay').value;
+            const time = document.getElementById('slotTime').value;
+            const name = document.getElementById('speakerName').value;
+            const title = document.getElementById('talkTitle').value;
+            const description = document.getElementById('talkDescription').value;
+
+            const content = {
+                day,
+                time,
+                name,
+                title,
+                description
+            };
+
+            const nostrEvent = await createNostrEvent(BOOKING_KIND, JSON.stringify(content));
+            publishEvent(nostrEvent);
+
+            closeModal();
+            showStatus('Booking submitted! It may take a few seconds to appear.');
+        }
+
+        async function createNostrEvent(kind, content) {
+            const privateKey = generatePrivateKey();
+            const publicKey = await getPublicKey(privateKey);
+
+            const event = {
+                kind,
+                created_at: Math.floor(Date.now() / 1000),
+                tags: [],
+                content,
+                pubkey: publicKey
+            };
+
+            event.id = await calculateEventId(event);
+            event.sig = await signEvent(event, privateKey);
+
+            return event;
+        }
+
+        function generatePrivateKey() {
+            const array = new Uint8Array(32);
+            crypto.getRandomValues(array);
+            return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function getPublicKey(privateKey) {
+            // Simplified: In production, use proper secp256k1 key derivation
+            const encoder = new TextEncoder();
+            const data = encoder.encode(privateKey);
+            const hash = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function calculateEventId(event) {
+            const serialized = JSON.stringify([
+                0,
+                event.pubkey,
+                event.created_at,
+                event.kind,
+                event.tags,
+                event.content
+            ]);
+            const encoder = new TextEncoder();
+            const data = encoder.encode(serialized);
+            const hash = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function signEvent(event, privateKey) {
+            // Simplified signature (not cryptographically valid for real Nostr)
+            // In production, use proper secp256k1 signature
+            const encoder = new TextEncoder();
+            const data = encoder.encode(event.id + privateKey);
+            const hash = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function publishEvent(event) {
+            appRelayConnections.forEach(ws => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify(['EVENT', event]));
+                }
+            });
+        }
+
+        function toggleAdmin() {
+            if (!adminMode) {
+                const password = prompt('Enter admin password:');
+                if (password === 'sailingclub2026') {
+                    adminMode = true;
+                    document.querySelector('.admin-btn').classList.add('active');
+                    document.querySelector('.admin-btn').textContent = 'Admin Mode: ON';
+                    document.body.classList.add('admin-mode');
+                    showStatus('Admin mode activated');
+                } else {
+                    alert('Incorrect password');
+                }
+            } else {
+                adminMode = false;
+                document.querySelector('.admin-btn').classList.remove('active');
+                document.querySelector('.admin-btn').textContent = 'Admin Mode';
+                document.body.classList.remove('admin-mode');
+                showStatus('Admin mode deactivated');
+            }
+        }
+
+        async function deleteBooking(day, time, event) {
+            event.stopPropagation();
+
+            if (!adminMode) return;
+
+            if (!confirm(`Delete booking for ${day} at ${time}?`)) return;
+
+            const booking = bookings.find(b => b.day === day && b.time === time);
+            if (!booking) return;
+
+            // Create deletion event
+            const content = JSON.stringify({
+                day,
+                time,
+                name: '',
+                title: '',
+                description: '',
+                deleted: true
+            });
+
+            const nostrEvent = await createNostrEvent(BOOKING_KIND, content);
+            publishEvent(nostrEvent);
+
+            // Remove locally
+            bookings = bookings.filter(b => !(b.day === day && b.time === time));
+            renderSchedule();
+
+            showStatus('Booking deleted');
+        }
+
+        function showStatus(message) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.classList.add('show');
+            setTimeout(() => status.classList.remove('show'), 3000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
