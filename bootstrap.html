@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading Sailing Club Schedule...</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        .loader {
+            text-align: center;
+            max-width: 500px;
+            padding: 40px;
+        }
+        .boat {
+            font-size: 5em;
+            margin-bottom: 20px;
+            animation: bob 2s ease-in-out infinite;
+        }
+        @keyframes bob {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        h1 {
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+        .status {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error {
+            background: rgba(255,0,0,0.2);
+            border: 2px solid rgba(255,0,0,0.5);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        .error-details {
+            font-size: 0.9em;
+            margin-top: 10px;
+            opacity: 0.8;
+        }
+        .config {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 0.85em;
+            text-align: left;
+        }
+        .config-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="loader">
+        <div class="boat">⛵</div>
+        <h1>Sailing Club Event Schedule</h1>
+        <div class="status" id="status">Connecting to Nostr relays...</div>
+        <div class="spinner" id="spinner"></div>
+        <div class="config">
+            <div class="config-title">Configuration:</div>
+            <div>App Event ID: <span id="eventId">Loading...</span></div>
+            <div>Event Kind: <span id="eventKind">30030</span></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - IMPORTANT: Update these after publishing your app!
+        const CONFIG = {
+            // The Nostr event ID containing your app HTML
+            // You'll get this after running publish-to-nostr.js
+            appEventId: '3e43a5f0ac1969a0056eae405a767529068420562574ff44a236679f4fddab6d',
+
+            // Event kind for application storage
+            eventKind: 30030,
+
+            // Nostr relays to connect to
+            relays: [
+                'wss://relay.damus.io',
+                'wss://nos.lol',
+                'wss://relay.nostr.band'
+            ]
+        };
+
+        let appLoaded = false;
+        let relayConnections = [];
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        function showError(message, details = '') {
+            const loader = document.querySelector('.loader');
+            document.getElementById('spinner').style.display = 'none';
+
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.innerHTML = `
+                <strong>⚠️ Error Loading App</strong>
+                <div style="margin-top: 10px;">${message}</div>
+                ${details ? `<div class="error-details">${details}</div>` : ''}
+            `;
+            loader.appendChild(errorDiv);
+        }
+
+        function loadApp() {
+            document.getElementById('eventId').textContent =
+                CONFIG.appEventId === 'YOUR_EVENT_ID_HERE'
+                    ? 'Not configured'
+                    : CONFIG.appEventId.substring(0, 16) + '...';
+
+            if (CONFIG.appEventId === 'YOUR_EVENT_ID_HERE') {
+                showError(
+                    'App not configured',
+                    'Please update the appEventId in bootstrap.html after publishing your app with publish-to-nostr.js'
+                );
+                return;
+            }
+
+            updateStatus('Connecting to Nostr relays...');
+            connectToRelays();
+
+            // Timeout after 10 seconds
+            setTimeout(() => {
+                if (!appLoaded) {
+                    showError(
+                        'Failed to load app from Nostr',
+                        'Please check that the app has been published to the relays and the event ID is correct.'
+                    );
+                }
+            }, 10000);
+        }
+
+        function connectToRelays() {
+            let connectedCount = 0;
+
+            CONFIG.relays.forEach((relayUrl, index) => {
+                const ws = new WebSocket(relayUrl);
+
+                ws.onopen = () => {
+                    connectedCount++;
+                    console.log('Connected to', relayUrl);
+                    updateStatus(`Connected to ${connectedCount}/${CONFIG.relays.length} relays...`);
+                    fetchApp(ws);
+                };
+
+                ws.onmessage = (event) => {
+                    handleRelayMessage(JSON.parse(event.data));
+                };
+
+                ws.onerror = (error) => {
+                    console.error('Failed to connect to', relayUrl, error);
+                };
+
+                relayConnections.push(ws);
+            });
+        }
+
+        function fetchApp(ws) {
+            const subId = 'app-fetch-' + Math.random().toString(36).substr(2, 9);
+
+            // Request the app event by ID
+            const request = ['REQ', subId, {
+                ids: [CONFIG.appEventId]
+            }];
+
+            ws.send(JSON.stringify(request));
+        }
+
+        function handleRelayMessage(message) {
+            const [type, subId, event] = message;
+
+            if (type === 'EVENT' && event && event.kind === CONFIG.eventKind) {
+                if (event.id === CONFIG.appEventId) {
+                    loadAppFromEvent(event);
+                }
+            } else if (type === 'EOSE' && !appLoaded) {
+                // End of stored events - app not found
+                console.log('End of stored events for subscription', subId);
+            }
+        }
+
+        function loadAppFromEvent(event) {
+            if (appLoaded) return;
+            appLoaded = true;
+
+            updateStatus('App found! Loading...');
+
+            try {
+                const appHtml = event.content;
+
+                // Replace the entire document with the app HTML
+                document.open();
+                document.write(appHtml);
+                document.close();
+
+                // Close relay connections
+                relayConnections.forEach(ws => ws.close());
+
+            } catch (error) {
+                showError('Error rendering app', error.message);
+                console.error('Render error:', error);
+            }
+        }
+
+        // Start loading
+        window.addEventListener('load', loadApp);
+    </script>
+</body>
+</html>
