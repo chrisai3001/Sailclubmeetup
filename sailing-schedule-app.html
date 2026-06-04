@@ -429,14 +429,12 @@
                         !(b.day === content.day && b.time === content.time)
                     );
 
-                    // Only add back if not a deletion event
-                    if (!content.deleted) {
-                        bookings.push({
-                            ...content,
-                            id: event.id,
-                            created_at: event.created_at
-                        });
-                    }
+                    // Always store the event (even deletions) to track latest timestamp
+                    bookings.push({
+                        ...content,
+                        id: event.id,
+                        created_at: event.created_at
+                    });
                 }
             } catch (e) {
                 console.error('Invalid booking event:', e);
@@ -492,7 +490,8 @@
                 const time = slot.dataset.time;
                 const booking = bookings.find(b => b.day === day && b.time === time);
 
-                if (booking) {
+                // Only show booking if it exists and is not deleted
+                if (booking && !booking.deleted) {
                     slot.classList.add('booked');
                     slot.innerHTML = `
                         <div class="slot-content">
@@ -512,7 +511,7 @@
 
         function openBookingModal(day, time) {
             const booking = bookings.find(b => b.day === day && b.time === time);
-            if (booking) return;
+            if (booking && !booking.deleted) return;
 
             document.getElementById('slotDay').value = day;
             document.getElementById('slotTime').value = time;
