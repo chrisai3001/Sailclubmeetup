@@ -110,7 +110,7 @@
         };
 
         let appLoaded = false;
-        let relayConnections = [];
+        let bootstrapRelayConnections = [];
 
         function updateStatus(message) {
             document.getElementById('status').textContent = message;
@@ -179,7 +179,7 @@
                     console.error('Failed to connect to', relayUrl, error);
                 };
 
-                relayConnections.push(ws);
+                bootstrapRelayConnections.push(ws);
             });
         }
 
@@ -222,7 +222,7 @@
                 document.close();
 
                 // Close relay connections
-                relayConnections.forEach(ws => ws.close());
+                bootstrapRelayConnections.forEach(ws => ws.close());
 
             } catch (error) {
                 showError('Error rendering app', error.message);
