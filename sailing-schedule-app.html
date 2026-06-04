@@ -280,6 +280,7 @@
             display: block;
         }
     </style>
+    <script src="https://unpkg.com/nostr-tools@2.1.0/lib/nostr.bundle.js"></script>
 </head>
 <body>
     <button class="admin-btn" onclick="toggleAdmin()">Admin Mode</button>
@@ -519,7 +520,7 @@
             document.getElementById('bookingForm').reset();
         }
 
-        async function submitBooking(event) {
+        function submitBooking(event) {
             event.preventDefault();
 
             const day = document.getElementById('slotDay').value;
@@ -536,67 +537,29 @@
                 description
             };
 
-            const nostrEvent = await createNostrEvent(BOOKING_KIND, JSON.stringify(content));
+            const nostrEvent = createNostrEvent(BOOKING_KIND, JSON.stringify(content));
             publishEvent(nostrEvent);
 
             closeModal();
             showStatus('Booking submitted! It may take a few seconds to appear.');
         }
 
-        async function createNostrEvent(kind, content) {
-            const privateKey = generatePrivateKey();
-            const publicKey = await getPublicKey(privateKey);
+        function createNostrEvent(kind, content) {
+            // Generate a new private key for each booking
+            const privateKey = NostrTools.generateSecretKey();
 
-            const event = {
+            // Create the event
+            const eventTemplate = {
                 kind,
                 created_at: Math.floor(Date.now() / 1000),
                 tags: [],
                 content,
-                pubkey: publicKey
             };
 
-            event.id = await calculateEventId(event);
-            event.sig = await signEvent(event, privateKey);
+            // Sign and finalize the event with proper secp256k1 crypto
+            const signedEvent = NostrTools.finalizeEvent(eventTemplate, privateKey);
 
-            return event;
-        }
-
-        function generatePrivateKey() {
-            const array = new Uint8Array(32);
-            crypto.getRandomValues(array);
-            return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
-        }
-
-        async function getPublicKey(privateKey) {
-            // Simplified: In production, use proper secp256k1 key derivation
-            const encoder = new TextEncoder();
-            const data = encoder.encode(privateKey);
-            const hash = await crypto.subtle.digest('SHA-256', data);
-            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-        }
-
-        async function calculateEventId(event) {
-            const serialized = JSON.stringify([
-                0,
-                event.pubkey,
-                event.created_at,
-                event.kind,
-                event.tags,
-                event.content
-            ]);
-            const encoder = new TextEncoder();
-            const data = encoder.encode(serialized);
-            const hash = await crypto.subtle.digest('SHA-256', data);
-            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-        }
-
-        async function signEvent(event, privateKey) {
-            // Simplified signature (not cryptographically valid for real Nostr)
-            // In production, use proper secp256k1 signature
-            const encoder = new TextEncoder();
-            const data = encoder.encode(event.id + privateKey);
-            const hash = await crypto.subtle.digest('SHA-256', data);
-            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+            return signedEvent;
         }
 
         function publishEvent(event) {
@@ -628,7 +591,7 @@
             }
         }
 
-        async function deleteBooking(day, time, event) {
+        function deleteBooking(day, time, event) {
             event.stopPropagation();
 
             if (!adminMode) return;
@@ -648,7 +611,7 @@
                 deleted: true
             });
 
-            const nostrEvent = await createNostrEvent(BOOKING_KIND, content);
+            const nostrEvent = createNostrEvent(BOOKING_KIND, content);
             publishEvent(nostrEvent);
 
             // Remove locally
