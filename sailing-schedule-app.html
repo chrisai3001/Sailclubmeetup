@@ -541,22 +541,26 @@
                 description
             };
 
-            const nostrEvent = createNostrEvent(BOOKING_KIND, JSON.stringify(content));
+            const nostrEvent = createNostrEvent(BOOKING_KIND, JSON.stringify(content), day, time);
             publishEvent(nostrEvent);
 
             closeModal();
             showStatus('Booking submitted! It may take a few seconds to appear.');
         }
 
-        function createNostrEvent(kind, content) {
+        function createNostrEvent(kind, content, day, time) {
             // Generate a new private key for each booking
             const privateKey = NostrTools.generateSecretKey();
+
+            // Create unique identifier for this slot using 'd' tag
+            // This prevents different bookings from replacing each other
+            const dTag = day && time ? `${day}-${time}` : '';
 
             // Create the event
             const eventTemplate = {
                 kind,
                 created_at: Math.floor(Date.now() / 1000),
-                tags: [],
+                tags: dTag ? [['d', dTag]] : [],
                 content,
             };
 
@@ -615,7 +619,7 @@
                 deleted: true
             });
 
-            const nostrEvent = createNostrEvent(BOOKING_KIND, content);
+            const nostrEvent = createNostrEvent(BOOKING_KIND, content, day, time);
             publishEvent(nostrEvent);
 
             // Remove locally
